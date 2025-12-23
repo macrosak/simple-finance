@@ -79,6 +79,20 @@ header h1 {
     background: var(--secondary-hover);
 }
 
+.btn-icon {
+    background: transparent;
+    color: var(--text-secondary);
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon:hover {
+    color: var(--text);
+    background: var(--border);
+}
+
 section {
     background: var(--surface);
     border-radius: 0.75rem;
@@ -218,6 +232,29 @@ th {
     max-width: 500px;
     max-height: 90vh;
     overflow-y: auto;
+}
+
+.modal-small {
+    max-width: 320px;
+}
+
+.setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.setting-row label {
+    font-weight: 500;
+}
+
+.setting-row select {
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    background: var(--surface);
 }
 
 .modal-header {

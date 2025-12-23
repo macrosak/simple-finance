@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'finance-tracker-data';
+const SETTINGS_KEY = 'finance-tracker-settings';
 
 const CHART_COLORS = [
     '#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a',
@@ -6,8 +7,21 @@ const CHART_COLORS = [
 ];
 
 let data = loadData();
+let settings = loadSettings();
 let chart = null;
 let zeroBasedChart = false;
+
+function loadSettings() {
+    const stored = localStorage.getItem(SETTINGS_KEY);
+    if (stored) {
+        return JSON.parse(stored);
+    }
+    return { currency: 'USD' };
+}
+
+function saveSettings() {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
 
 function loadData() {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -52,7 +66,7 @@ function calculateTotal() {
 function formatCurrency(amount) {
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: 'USD',
+        currency: settings.currency,
         minimumFractionDigits: 2
     }).format(amount);
 }
@@ -452,7 +466,7 @@ document.getElementById('exportBtn').addEventListener('click', exportCSV);
 document.getElementById('addSourceBtn').addEventListener('click', addSource);
 document.getElementById('saveBtn').addEventListener('click', saveEntry);
 document.getElementById('cancelBtn').addEventListener('click', closeModal);
-document.querySelector('.close-btn').addEventListener('click', closeModal);
+document.querySelector('#dataModal .close-btn').addEventListener('click', closeModal);
 
 document.getElementById('dataModal').addEventListener('click', (e) => {
     if (e.target.id === 'dataModal') {
@@ -469,6 +483,28 @@ document.getElementById('newSourceName').addEventListener('keypress', (e) => {
 document.getElementById('zeroBasedCheckbox').addEventListener('change', (e) => {
     zeroBasedChart = e.target.checked;
     updateChart();
+});
+
+// Settings
+document.getElementById('settingsBtn').addEventListener('click', () => {
+    document.getElementById('currencySelect').value = settings.currency;
+    document.getElementById('settingsModal').classList.add('active');
+});
+
+document.querySelector('#settingsModal .close-btn').addEventListener('click', () => {
+    document.getElementById('settingsModal').classList.remove('active');
+});
+
+document.getElementById('settingsModal').addEventListener('click', (e) => {
+    if (e.target.id === 'settingsModal') {
+        document.getElementById('settingsModal').classList.remove('active');
+    }
+});
+
+document.getElementById('currencySelect').addEventListener('change', (e) => {
+    settings.currency = e.target.value;
+    saveSettings();
+    updateUI();
 });
 
 // Initialize
