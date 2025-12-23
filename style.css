@@ -157,7 +157,7 @@ section h2 {
 
 .chart-container {
     position: relative;
-    height: 300px;
+    height: 500px;
 }
 
 .no-data-message {
@@ -426,7 +426,7 @@ th {
     }
 
     .chart-container {
-        height: 200px;
+        height: 400px;
     }
 
     th, td {
