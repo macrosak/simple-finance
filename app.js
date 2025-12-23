@@ -80,7 +80,8 @@ function formatCurrency(amount) {
     return new Intl.NumberFormat(locale, {
         style: 'currency',
         currency: settings.currency,
-        minimumFractionDigits: settings.currency === 'JPY' ? 0 : 2
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
     }).format(amount);
 }
 
