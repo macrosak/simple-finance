@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Finance Tracker</h1>
+            <div class="header-actions">
+                <button id="enterDataBtn" class="btn btn-primary">Enter Data</button>
+                <button id="exportBtn" class="btn btn-secondary">Export CSV</button>
+            </div>
+        </header>
+
+        <main>
+            <section class="total-section">
+                <h2>Total Assets</h2>
+                <div id="totalValue" class="total-value">$0.00</div>
+            </section>
+
+            <section class="chart-section">
+                <h2>Asset History</h2>
+                <div class="chart-container">
+                    <canvas id="assetChart"></canvas>
+                </div>
+                <div id="noDataMessage" class="no-data-message">No data yet. Click "Enter Data" to start tracking.</div>
+            </section>
+
+            <section class="table-section">
+                <h2>Data Table</h2>
+                <div class="table-wrapper">
+                    <table id="dataTable">
+                        <thead>
+                            <tr id="tableHeader"></tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Data Entry Modal -->
+    <div id="dataModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Enter Data</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="date-picker">
+                    <label for="entryDate">Date:</label>
+                    <input type="date" id="entryDate">
+                </div>
+                <div id="sourceInputs" class="source-inputs"></div>
+                <div class="add-source">
+                    <input type="text" id="newSourceName" placeholder="New source name...">
+                    <button id="addSourceBtn" class="btn btn-secondary">Add Source</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelBtn" class="btn btn-secondary">Cancel</button>
+                <button id="saveBtn" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tooltip for comments -->
+    <div id="tooltip" class="tooltip"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
