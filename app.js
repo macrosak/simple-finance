@@ -93,6 +93,20 @@ function formatDate(dateStr) {
     });
 }
 
+function formatYear(dateStr) {
+    return new Date(dateStr).getFullYear().toString();
+}
+
+function formatCompact(val) {
+    if (val >= 1000000) {
+        return (val / 1000000).toFixed(val % 1000000 === 0 ? 0 : 1) + ' M';
+    }
+    if (val >= 1000) {
+        return (val / 1000).toFixed(val % 1000 === 0 ? 0 : 1) + ' K';
+    }
+    return val.toString();
+}
+
 function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
 }
@@ -168,14 +182,14 @@ function updateChart() {
                 x: {
                     type: 'category',
                     ticks: {
-                        callback: (val, idx) => formatDate(labels[idx])
+                        callback: (val, idx) => formatYear(labels[idx])
                     }
                 },
                 y: {
                     stacked: true,
                     beginAtZero: zeroBasedChart,
                     ticks: {
-                        callback: (val) => formatCurrency(val)
+                        callback: (val) => formatCompact(val)
                     }
                 }
             },
