@@ -467,6 +467,102 @@ function exportCSV() {
     URL.revokeObjectURL(url);
 }
 
+function parseCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+                current += '"';
+                i++;
+            } else {
+                inQuotes = !inQuotes;
+            }
+        } else if (char === ',' && !inQuotes) {
+            result.push(current.trim());
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+    result.push(current.trim());
+    return result;
+}
+
+function importCSV(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const text = e.target.result;
+        const lines = text.split('\n').filter(l => l.trim());
+
+        if (lines.length < 2) {
+            alert('CSV file must have a header and at least one data row');
+            return;
+        }
+
+        const headers = parseCSVLine(lines[0]);
+        if (headers[0].toLowerCase() !== 'date') {
+            alert('First column must be "Date"');
+            return;
+        }
+
+        // Find source columns (skip Comment columns and Total)
+        const sourceColumns = [];
+        for (let i = 1; i < headers.length; i++) {
+            const header = headers[i];
+            if (header.toLowerCase() === 'total') continue;
+            if (header.toLowerCase().endsWith(' comment')) continue;
+            sourceColumns.push({ index: i, name: header });
+        }
+
+        // Create or find sources
+        const sourceMap = {};
+        for (const col of sourceColumns) {
+            let source = data.sources.find(s => s.name.toLowerCase() === col.name.toLowerCase());
+            if (!source) {
+                source = { id: generateId(), name: col.name, closed: false };
+                data.sources.push(source);
+            }
+            sourceMap[col.index] = source.id;
+        }
+
+        // Import entries
+        let imported = 0;
+        for (let i = 1; i < lines.length; i++) {
+            const row = parseCSVLine(lines[i]);
+            if (!row[0]) continue;
+
+            const date = row[0];
+            const values = {};
+
+            for (const col of sourceColumns) {
+                const val = parseFloat(row[col.index]);
+                if (!isNaN(val)) {
+                    values[sourceMap[col.index]] = val;
+                }
+            }
+
+            if (Object.keys(values).length > 0) {
+                const existingIdx = data.entries.findIndex(e => e.date === date);
+                if (existingIdx >= 0) {
+                    data.entries[existingIdx].values = { ...data.entries[existingIdx].values, ...values };
+                } else {
+                    data.entries.push({ date, values, comments: {} });
+                }
+                imported++;
+            }
+        }
+
+        saveData();
+        updateUI();
+        alert(`Imported ${imported} entries`);
+    };
+    reader.readAsText(file);
+}
+
 function updateUI() {
     updateTotalDisplay();
     updateChart();
@@ -475,6 +571,15 @@ function updateUI() {
 
 // Event listeners
 document.getElementById('enterDataBtn').addEventListener('click', openModal);
+document.getElementById('importBtn').addEventListener('click', () => {
+    document.getElementById('importFile').click();
+});
+document.getElementById('importFile').addEventListener('change', (e) => {
+    if (e.target.files[0]) {
+        importCSV(e.target.files[0]);
+        e.target.value = '';
+    }
+});
 document.getElementById('exportBtn').addEventListener('click', exportCSV);
 document.getElementById('addSourceBtn').addEventListener('click', addSource);
 document.getElementById('saveBtn').addEventListener('click', saveEntry);
