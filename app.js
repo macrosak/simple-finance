@@ -9,7 +9,7 @@ const CHART_COLORS = [
 let data = loadData();
 let settings = loadSettings();
 let chart = null;
-let zeroBasedChart = true;
+let zeroBasedChart = false;
 
 function loadSettings() {
     const stored = localStorage.getItem(SETTINGS_KEY);
