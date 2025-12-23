@@ -493,6 +493,26 @@ function parseCSVLine(line) {
     return result;
 }
 
+function parseDate(dateStr) {
+    // Try DD.MM.YYYY format first
+    const ddmmyyyy = dateStr.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    if (ddmmyyyy) {
+        const [, day, month, year] = ddmmyyyy;
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    // Already in YYYY-MM-DD format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        return dateStr;
+    }
+    return null;
+}
+
+function isIgnoredColumn(header) {
+    const lower = header.toLowerCase();
+    const ignored = ['total', 'diff', 'delta', 'note', 'eur', 'usd'];
+    return ignored.some(term => lower.includes(term)) || lower.endsWith(' comment');
+}
+
 function importCSV(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -505,17 +525,17 @@ function importCSV(file) {
         }
 
         const headers = parseCSVLine(lines[0]);
-        if (headers[0].toLowerCase() !== 'date') {
-            alert('First column must be "Date"');
+        const firstCol = headers[0].toLowerCase();
+        if (firstCol !== 'date' && firstCol !== 'datum') {
+            alert('First column must be "Date" or "Datum"');
             return;
         }
 
-        // Find source columns (skip Comment columns and Total)
+        // Find source columns (skip ignored columns)
         const sourceColumns = [];
         for (let i = 1; i < headers.length; i++) {
             const header = headers[i];
-            if (header.toLowerCase() === 'total') continue;
-            if (header.toLowerCase().endsWith(' comment')) continue;
+            if (!header || isIgnoredColumn(header)) continue;
             sourceColumns.push({ index: i, name: header });
         }
 
@@ -536,7 +556,9 @@ function importCSV(file) {
             const row = parseCSVLine(lines[i]);
             if (!row[0]) continue;
 
-            const date = row[0];
+            const date = parseDate(row[0]);
+            if (!date) continue;
+
             const values = {};
 
             for (const col of sourceColumns) {
