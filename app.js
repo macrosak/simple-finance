@@ -523,7 +523,7 @@ function parseDate(dateStr) {
 
 function isIgnoredColumn(header) {
     const lower = header.toLowerCase();
-    const ignored = ['total', 'diff', 'delta', 'note', 'eur', 'usd'];
+    const ignored = ['total', 'diff', 'note', 'eur', 'usd'];
     return ignored.some(term => lower.includes(term)) || lower.endsWith(' comment');
 }
 
