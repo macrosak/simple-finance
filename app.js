@@ -513,6 +513,13 @@ function isIgnoredColumn(header) {
     return ignored.some(term => lower.includes(term)) || lower.endsWith(' comment');
 }
 
+function parseNumber(str) {
+    if (!str) return NaN;
+    // Remove thousand separators (commas and spaces)
+    const cleaned = str.replace(/[,\s]/g, '');
+    return parseFloat(cleaned);
+}
+
 function importCSV(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -562,7 +569,7 @@ function importCSV(file) {
             const values = {};
 
             for (const col of sourceColumns) {
-                const val = parseFloat(row[col.index]);
+                const val = parseNumber(row[col.index]);
                 if (!isNaN(val)) {
                     values[sourceMap[col.index]] = val;
                 }
