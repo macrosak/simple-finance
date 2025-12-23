@@ -7,6 +7,7 @@ const CHART_COLORS = [
 
 let data = loadData();
 let chart = null;
+let zeroBasedChart = false;
 
 function loadData() {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -144,6 +145,7 @@ function updateChart() {
                 },
                 y: {
                     stacked: true,
+                    beginAtZero: zeroBasedChart,
                     ticks: {
                         callback: (val) => formatCurrency(val)
                     }
@@ -462,6 +464,11 @@ document.getElementById('newSourceName').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
         addSource();
     }
+});
+
+document.getElementById('zeroBasedCheckbox').addEventListener('change', (e) => {
+    zeroBasedChart = e.target.checked;
+    updateChart();
 });
 
 // Initialize
