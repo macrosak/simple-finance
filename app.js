@@ -626,5 +626,14 @@ document.getElementById('currencySelect').addEventListener('change', (e) => {
     updateUI();
 });
 
+document.getElementById('clearDataBtn').addEventListener('click', () => {
+    if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
+        data = { sources: [], entries: [] };
+        saveData();
+        updateUI();
+        document.getElementById('settingsModal').classList.remove('active');
+    }
+});
+
 // Initialize
 updateUI();

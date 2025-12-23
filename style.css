@@ -83,6 +83,15 @@ header h1 {
     background: var(--secondary-hover);
 }
 
+.btn-danger {
+    background: var(--danger);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+}
+
 .btn-icon {
     background: transparent;
     color: var(--text-secondary);
@@ -259,6 +268,12 @@ th {
     border-radius: 0.5rem;
     font-size: 1rem;
     background: var(--surface);
+}
+
+.setting-row-danger {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
 }
 
 .modal-header {
