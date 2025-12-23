@@ -63,11 +63,24 @@ function calculateTotal() {
     return Object.values(latest).reduce((sum, val) => sum + val, 0);
 }
 
+const CURRENCY_LOCALES = {
+    USD: 'en-US',
+    EUR: 'de-DE',
+    GBP: 'en-GB',
+    JPY: 'ja-JP',
+    CHF: 'de-CH',
+    CAD: 'en-CA',
+    AUD: 'en-AU',
+    CNY: 'zh-CN',
+    CZK: 'cs-CZ'
+};
+
 function formatCurrency(amount) {
-    return new Intl.NumberFormat('en-US', {
+    const locale = CURRENCY_LOCALES[settings.currency] || 'en-US';
+    return new Intl.NumberFormat(locale, {
         style: 'currency',
         currency: settings.currency,
-        minimumFractionDigits: 2
+        minimumFractionDigits: settings.currency === 'JPY' ? 0 : 2
     }).format(amount);
 }
 
