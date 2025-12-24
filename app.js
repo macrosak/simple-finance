@@ -157,6 +157,31 @@ function getAccountColor(accountId) {
     return CHART_COLORS[idx % CHART_COLORS.length];
 }
 
+// Template helpers
+const accountBreakdownTemplate = document.getElementById('accountBreakdownItemTemplate');
+const accountInputTemplate = document.getElementById('accountInputTemplate');
+
+function createAccountBreakdownItem(item, isHidden) {
+    const clone = accountBreakdownTemplate.content.cloneNode(true);
+    const wrapper = clone.querySelector('.account-breakdown-item');
+    wrapper.dataset.accountId = item.id;
+    if (isHidden) wrapper.classList.add('hidden-account');
+    clone.querySelector('.account-color').style.background = item.color;
+    clone.querySelector('.account-breakdown-name').textContent = item.name;
+    clone.querySelector('.account-breakdown-value').textContent = item.value;
+    return clone;
+}
+
+function createAccountInput(account, latestValue) {
+    const clone = accountInputTemplate.content.cloneNode(true);
+    const wrapper = clone.querySelector('.account-input');
+    wrapper.dataset.accountId = account.id;
+    clone.querySelector('label').textContent = account.name;
+    clone.querySelector('button').onclick = () => closeAccount(account.id);
+    clone.querySelector('input[type="number"]').value = latestValue || '';
+    return clone;
+}
+
 function updateTotalDisplay() {
     document.getElementById('totalValue').textContent = formatCurrency(calculateTotal());
 
@@ -184,40 +209,30 @@ function updateTotalDisplay() {
         .map(account => ({
             id: account.id,
             name: account.name,
-            value: latestValues[account.id] || 0,
+            value: formatCurrency(latestValues[account.id] || 0),
             color: getAccountColor(account.id)
         }))
-        .sort((a, b) => b.value - a.value);
+        .sort((a, b) => (latestValues[b.id] || 0) - (latestValues[a.id] || 0));
 
-    activeList.innerHTML = activeItems.map(item => `
-        <div class="account-breakdown-item ${hiddenAccounts.has(item.id) ? 'hidden-account' : ''}" data-account-id="${item.id}">
-            <div class="account-name-wrapper">
-                <span class="account-color" style="background: ${item.color}"></span>
-                <span class="account-breakdown-name">${item.name}</span>
-            </div>
-            <span class="account-breakdown-value">${formatCurrency(item.value)}</span>
-        </div>
-    `).join('');
+    activeList.innerHTML = '';
+    for (const item of activeItems) {
+        activeList.appendChild(createAccountBreakdownItem(item, hiddenAccounts.has(item.id)));
+    }
 
     // Render closed accounts
     if (closedAccounts.length > 0) {
         closedToggle.classList.add('visible');
+        closedList.innerHTML = '';
 
-        const closedItems = closedAccounts.map(account => ({
-            id: account.id,
-            name: account.name,
-            color: getAccountColor(account.id)
-        }));
-
-        closedList.innerHTML = closedItems.map(item => `
-            <div class="account-breakdown-item ${hiddenAccounts.has(item.id) ? 'hidden-account' : ''}" data-account-id="${item.id}">
-                <div class="account-name-wrapper">
-                    <span class="account-color" style="background: ${item.color}"></span>
-                    <span class="account-breakdown-name">${item.name}</span>
-                </div>
-                <span class="account-breakdown-value">closed</span>
-            </div>
-        `).join('');
+        for (const account of closedAccounts) {
+            const item = {
+                id: account.id,
+                name: account.name,
+                value: 'closed',
+                color: getAccountColor(account.id)
+            };
+            closedList.appendChild(createAccountBreakdownItem(item, hiddenAccounts.has(account.id)));
+        }
     } else {
         closedToggle.classList.remove('visible');
         closedList.innerHTML = '';
@@ -452,28 +467,18 @@ function setupTooltips() {
 function openModal() {
     const modal = document.getElementById('dataModal');
     const dateInput = document.getElementById('entryDate');
-    const accountInputs = document.getElementById('accountInputs');
+    const accountInputsContainer = document.getElementById('accountInputs');
 
     dateInput.value = new Date().toISOString().split('T')[0];
 
     const activeAccounts = getActiveAccounts();
     const latestValues = getLatestValues();
 
-    let html = '';
+    accountInputsContainer.innerHTML = '';
     for (const account of activeAccounts) {
-        html += `
-            <div class="account-input" data-account-id="${account.id}">
-                <div class="account-input-header">
-                    <label>${escapeHtml(account.name)}</label>
-                    <button type="button" onclick="closeAccount('${account.id}')">Close account</button>
-                </div>
-                <input type="number" step="0.01" placeholder="Value" value="${latestValues[account.id] || ''}">
-                <input type="text" placeholder="Comment (optional)">
-            </div>
-        `;
+        accountInputsContainer.appendChild(createAccountInput(account, latestValues[account.id]));
     }
 
-    accountInputs.innerHTML = html;
     modal.classList.add('active');
 }
 

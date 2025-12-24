@@ -130,6 +130,28 @@
     <!-- Tooltip for comments -->
     <div id="tooltip" class="tooltip"></div>
 
+    <!-- Templates -->
+    <template id="accountBreakdownItemTemplate">
+        <div class="account-breakdown-item" data-account-id="">
+            <div class="account-name-wrapper">
+                <span class="account-color"></span>
+                <span class="account-breakdown-name"></span>
+            </div>
+            <span class="account-breakdown-value"></span>
+        </div>
+    </template>
+
+    <template id="accountInputTemplate">
+        <div class="account-input" data-account-id="">
+            <div class="account-input-header">
+                <label></label>
+                <button type="button">Close account</button>
+            </div>
+            <input type="number" step="0.01" placeholder="Value">
+            <input type="text" placeholder="Comment (optional)">
+        </div>
+    </template>
+
     <script src="app.js"></script>
 </body>
 </html>
