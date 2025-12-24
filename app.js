@@ -11,6 +11,7 @@ let settings = loadSettings();
 let chart = null;
 let zeroBasedChart = true;
 let hiddenSources = new Set();
+let showClosedInTable = false;
 
 function loadSettings() {
     const stored = localStorage.getItem(SETTINGS_KEY);
@@ -290,7 +291,9 @@ function updateTable() {
 
     const sortedEntries = [...data.entries].sort((a, b) => new Date(b.date) - new Date(a.date));
     const activeSources = data.sources.filter(s => {
-        return sortedEntries.some(e => e.values[s.id] !== undefined);
+        const hasData = sortedEntries.some(e => e.values[s.id] !== undefined);
+        const showSource = showClosedInTable || !s.closed;
+        return hasData && showSource;
     });
 
     // Build header
@@ -745,6 +748,11 @@ document.getElementById('newSourceName').addEventListener('keypress', (e) => {
 document.getElementById('zeroBasedCheckbox').addEventListener('change', (e) => {
     zeroBasedChart = e.target.checked;
     updateChart();
+});
+
+document.getElementById('showClosedInTableCheckbox').addEventListener('change', (e) => {
+    showClosedInTable = e.target.checked;
+    updateTable();
 });
 
 // Settings
