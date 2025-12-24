@@ -10,7 +10,7 @@ let data = loadData();
 let settings = loadSettings();
 let chart = null;
 let zeroBasedChart = true;
-let hiddenSources = new Set();
+let hiddenAccounts = new Set();
 
 function loadSettings() {
     const stored = localStorage.getItem(SETTINGS_KEY);
@@ -27,10 +27,17 @@ function saveSettings() {
 function loadData() {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        // Migration: rename sources to accounts if needed
+        if (parsed.sources && !parsed.accounts) {
+            parsed.accounts = parsed.sources;
+            delete parsed.sources;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        }
+        return parsed;
     }
     return {
-        sources: [],
+        accounts: [],
         entries: []
     };
 }
@@ -39,19 +46,19 @@ function saveData() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
-function getActiveSources() {
-    return data.sources.filter(s => !s.closed);
+function getActiveAccounts() {
+    return data.accounts.filter(a => !a.closed);
 }
 
 function getLatestValues() {
     const latest = {};
     const sortedEntries = [...data.entries].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    for (const source of data.sources) {
-        if (source.closed) continue;
+    for (const account of data.accounts) {
+        if (account.closed) continue;
         for (const entry of sortedEntries) {
-            if (entry.values[source.id] !== undefined) {
-                latest[source.id] = entry.values[source.id];
+            if (entry.values[account.id] !== undefined) {
+                latest[account.id] = entry.values[account.id];
                 break;
             }
         }
@@ -68,7 +75,7 @@ function calculateChangeSinceLastEntry() {
     if (data.entries.length < 2) return null;
 
     const sortedEntries = [...data.entries].sort((a, b) => new Date(b.date) - new Date(a.date));
-    const activeSources = data.sources.filter(s => !s.closed);
+    const activeAccounts = data.accounts.filter(a => !a.closed);
 
     // Calculate totals for the two most recent entries
     const runningValues = {};
@@ -79,13 +86,13 @@ function calculateChangeSinceLastEntry() {
     const chronological = [...sortedEntries].reverse();
     for (let i = 0; i < chronological.length; i++) {
         const entry = chronological[i];
-        for (const source of activeSources) {
-            if (entry.values[source.id] !== undefined) {
-                runningValues[source.id] = entry.values[source.id];
+        for (const account of activeAccounts) {
+            if (entry.values[account.id] !== undefined) {
+                runningValues[account.id] = entry.values[account.id];
             }
         }
 
-        const total = activeSources.reduce((sum, s) => sum + (runningValues[s.id] || 0), 0);
+        const total = activeAccounts.reduce((sum, a) => sum + (runningValues[a.id] || 0), 0);
 
         if (i === chronological.length - 1) {
             latestTotal = total;
@@ -145,8 +152,8 @@ function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
 }
 
-function getSourceColor(sourceId) {
-    const idx = data.sources.findIndex(s => s.id === sourceId);
+function getAccountColor(accountId) {
+    const idx = data.accounts.findIndex(a => a.id === accountId);
     return CHART_COLORS[idx % CHART_COLORS.length];
 }
 
@@ -164,51 +171,51 @@ function updateTotalDisplay() {
         changeEl.innerHTML = '';
     }
 
-    const activeList = document.getElementById('activeSourcesList');
-    const closedList = document.getElementById('closedSourcesList');
-    const closedToggle = document.getElementById('closedSourcesToggle');
+    const activeList = document.getElementById('activeAccountsList');
+    const closedList = document.getElementById('closedAccountsList');
+    const closedToggle = document.getElementById('closedAccountsToggle');
     const latestValues = getLatestValues();
 
-    const activeSources = data.sources.filter(s => !s.closed);
-    const closedSources = data.sources.filter(s => s.closed);
+    const activeAccounts = data.accounts.filter(a => !a.closed);
+    const closedAccounts = data.accounts.filter(a => a.closed);
 
-    // Render active sources
-    const activeItems = activeSources
-        .map(source => ({
-            id: source.id,
-            name: source.name,
-            value: latestValues[source.id] || 0,
-            color: getSourceColor(source.id)
+    // Render active accounts
+    const activeItems = activeAccounts
+        .map(account => ({
+            id: account.id,
+            name: account.name,
+            value: latestValues[account.id] || 0,
+            color: getAccountColor(account.id)
         }))
         .sort((a, b) => b.value - a.value);
 
     activeList.innerHTML = activeItems.map(item => `
-        <div class="source-breakdown-item ${hiddenSources.has(item.id) ? 'hidden-source' : ''}" data-source-id="${item.id}">
-            <div class="source-name-wrapper">
-                <span class="source-color" style="background: ${item.color}"></span>
-                <span class="source-breakdown-name">${item.name}</span>
+        <div class="account-breakdown-item ${hiddenAccounts.has(item.id) ? 'hidden-account' : ''}" data-account-id="${item.id}">
+            <div class="account-name-wrapper">
+                <span class="account-color" style="background: ${item.color}"></span>
+                <span class="account-breakdown-name">${item.name}</span>
             </div>
-            <span class="source-breakdown-value">${formatCurrency(item.value)}</span>
+            <span class="account-breakdown-value">${formatCurrency(item.value)}</span>
         </div>
     `).join('');
 
-    // Render closed sources
-    if (closedSources.length > 0) {
+    // Render closed accounts
+    if (closedAccounts.length > 0) {
         closedToggle.classList.add('visible');
 
-        const closedItems = closedSources.map(source => ({
-            id: source.id,
-            name: source.name,
-            color: getSourceColor(source.id)
+        const closedItems = closedAccounts.map(account => ({
+            id: account.id,
+            name: account.name,
+            color: getAccountColor(account.id)
         }));
 
         closedList.innerHTML = closedItems.map(item => `
-            <div class="source-breakdown-item ${hiddenSources.has(item.id) ? 'hidden-source' : ''}" data-source-id="${item.id}">
-                <div class="source-name-wrapper">
-                    <span class="source-color" style="background: ${item.color}"></span>
-                    <span class="source-breakdown-name">${item.name}</span>
+            <div class="account-breakdown-item ${hiddenAccounts.has(item.id) ? 'hidden-account' : ''}" data-account-id="${item.id}">
+                <div class="account-name-wrapper">
+                    <span class="account-color" style="background: ${item.color}"></span>
+                    <span class="account-breakdown-name">${item.name}</span>
                 </div>
-                <span class="source-breakdown-value">closed</span>
+                <span class="account-breakdown-value">closed</span>
             </div>
         `).join('');
     } else {
@@ -216,15 +223,15 @@ function updateTotalDisplay() {
         closedList.innerHTML = '';
     }
 
-    // Add click handlers for toggling source visibility
-    document.querySelectorAll('.source-breakdown-item[data-source-id]').forEach(item => {
+    // Add click handlers for toggling account visibility
+    document.querySelectorAll('.account-breakdown-item[data-account-id]').forEach(item => {
         item.addEventListener('click', (e) => {
             e.stopPropagation();
-            const sourceId = item.getAttribute('data-source-id');
-            if (hiddenSources.has(sourceId)) {
-                hiddenSources.delete(sourceId);
+            const accountId = item.getAttribute('data-account-id');
+            if (hiddenAccounts.has(accountId)) {
+                hiddenAccounts.delete(accountId);
             } else {
-                hiddenSources.add(sourceId);
+                hiddenAccounts.add(accountId);
             }
             updateTotalDisplay();
             updateChart();
@@ -251,27 +258,27 @@ function updateChart() {
     noDataMsg.classList.add('hidden');
 
     const sortedEntries = [...data.entries].sort((a, b) => new Date(a.date) - new Date(b.date));
-    const sourcesWithData = data.sources.filter(s => {
-        return sortedEntries.some(e => e.values[s.id] !== undefined);
+    const accountsWithData = data.accounts.filter(a => {
+        return sortedEntries.some(e => e.values[a.id] !== undefined);
     });
 
-    // Filter out hidden sources
-    const visibleSources = sourcesWithData.filter(s => !hiddenSources.has(s.id));
+    // Filter out hidden accounts
+    const visibleAccounts = accountsWithData.filter(a => !hiddenAccounts.has(a.id));
 
     const labels = sortedEntries.map(e => e.date);
 
-    const datasets = visibleSources.map((source) => {
-        const color = getSourceColor(source.id);
+    const datasets = visibleAccounts.map((account) => {
+        const color = getAccountColor(account.id);
         let lastValue = 0;
         const values = sortedEntries.map(entry => {
-            if (entry.values[source.id] !== undefined) {
-                lastValue = entry.values[source.id];
+            if (entry.values[account.id] !== undefined) {
+                lastValue = entry.values[account.id];
             }
             return lastValue;
         });
 
         return {
-            label: source.name,
+            label: account.name,
             data: values,
             fill: true,
             backgroundColor: color + '80',
@@ -334,16 +341,16 @@ function updateTable() {
     }
 
     const sortedEntries = [...data.entries].sort((a, b) => new Date(b.date) - new Date(a.date));
-    const activeSources = data.sources.filter(s => {
-        const hasData = sortedEntries.some(e => e.values[s.id] !== undefined);
-        const isVisible = !hiddenSources.has(s.id);
+    const activeAccounts = data.accounts.filter(a => {
+        const hasData = sortedEntries.some(e => e.values[a.id] !== undefined);
+        const isVisible = !hiddenAccounts.has(a.id);
         return hasData && isVisible;
     });
 
     // Build header
     let headerHtml = '<th>Date</th>';
-    for (const source of activeSources) {
-        headerHtml += `<th>${escapeHtml(source.name)}</th>`;
+    for (const account of activeAccounts) {
+        headerHtml += `<th>${escapeHtml(account.name)}</th>`;
     }
     headerHtml += '<th>Total</th><th>Change</th>';
     thead.innerHTML = headerHtml;
@@ -352,13 +359,13 @@ function updateTable() {
     const runningValues = {};
     const rows = sortedEntries.map((entry, idx) => {
         // Update running values for this entry
-        for (const source of activeSources) {
-            if (entry.values[source.id] !== undefined) {
-                runningValues[source.id] = entry.values[source.id];
+        for (const account of activeAccounts) {
+            if (entry.values[account.id] !== undefined) {
+                runningValues[account.id] = entry.values[account.id];
             }
         }
 
-        const total = activeSources.reduce((sum, s) => sum + (runningValues[s.id] || 0), 0);
+        const total = activeAccounts.reduce((sum, a) => sum + (runningValues[a.id] || 0), 0);
 
         return {
             entry,
@@ -375,9 +382,9 @@ function updateTable() {
         bodyHtml += '<tr>';
         bodyHtml += `<td>${formatDate(row.entry.date)}</td>`;
 
-        for (const source of activeSources) {
-            const val = row.values[source.id] || 0;
-            const comment = row.entry.comments?.[source.id];
+        for (const account of activeAccounts) {
+            const val = row.values[account.id] || 0;
+            const comment = row.entry.comments?.[account.id];
             let cellContent = formatCurrency(val);
 
             if (comment) {
@@ -445,28 +452,28 @@ function setupTooltips() {
 function openModal() {
     const modal = document.getElementById('dataModal');
     const dateInput = document.getElementById('entryDate');
-    const sourceInputs = document.getElementById('sourceInputs');
+    const accountInputs = document.getElementById('accountInputs');
 
     dateInput.value = new Date().toISOString().split('T')[0];
 
-    const activeSources = getActiveSources();
+    const activeAccounts = getActiveAccounts();
     const latestValues = getLatestValues();
 
     let html = '';
-    for (const source of activeSources) {
+    for (const account of activeAccounts) {
         html += `
-            <div class="source-input" data-source-id="${source.id}">
-                <div class="source-input-header">
-                    <label>${escapeHtml(source.name)}</label>
-                    <button type="button" onclick="closeSource('${source.id}')">Close source</button>
+            <div class="account-input" data-account-id="${account.id}">
+                <div class="account-input-header">
+                    <label>${escapeHtml(account.name)}</label>
+                    <button type="button" onclick="closeAccount('${account.id}')">Close account</button>
                 </div>
-                <input type="number" step="0.01" placeholder="Value" value="${latestValues[source.id] || ''}">
+                <input type="number" step="0.01" placeholder="Value" value="${latestValues[account.id] || ''}">
                 <input type="text" placeholder="Comment (optional)">
             </div>
         `;
     }
 
-    sourceInputs.innerHTML = html;
+    accountInputs.innerHTML = html;
     modal.classList.add('active');
 }
 
@@ -474,32 +481,32 @@ function closeModal() {
     document.getElementById('dataModal').classList.remove('active');
 }
 
-function closeSource(sourceId) {
-    if (confirm('Close this source? It will no longer appear in new entries.')) {
-        const source = data.sources.find(s => s.id === sourceId);
-        if (source) {
-            source.closed = true;
+function closeAccount(accountId) {
+    if (confirm('Close this account? It will no longer appear in new entries.')) {
+        const account = data.accounts.find(a => a.id === accountId);
+        if (account) {
+            account.closed = true;
             saveData();
             openModal(); // Refresh modal
         }
     }
 }
 
-function addSource() {
-    const input = document.getElementById('newSourceName');
+function addAccount() {
+    const input = document.getElementById('newAccountName');
     const name = input.value.trim();
 
     if (!name) {
-        alert('Please enter a source name');
+        alert('Please enter an account name');
         return;
     }
 
-    if (data.sources.some(s => s.name.toLowerCase() === name.toLowerCase() && !s.closed)) {
-        alert('A source with this name already exists');
+    if (data.accounts.some(a => a.name.toLowerCase() === name.toLowerCase() && !a.closed)) {
+        alert('An account with this name already exists');
         return;
     }
 
-    data.sources.push({
+    data.accounts.push({
         id: generateId(),
         name,
         closed: false
@@ -519,21 +526,21 @@ function saveEntry() {
         return;
     }
 
-    const sourceInputs = document.querySelectorAll('.source-input');
+    const accountInputs = document.querySelectorAll('.account-input');
     const values = {};
     const comments = {};
 
-    sourceInputs.forEach(input => {
-        const sourceId = input.getAttribute('data-source-id');
+    accountInputs.forEach(input => {
+        const accountId = input.getAttribute('data-account-id');
         const valueInput = input.querySelector('input[type="number"]');
         const commentInput = input.querySelector('input[type="text"]');
 
         if (valueInput.value !== '') {
-            values[sourceId] = parseFloat(valueInput.value);
+            values[accountId] = parseFloat(valueInput.value);
         }
 
         if (commentInput.value.trim()) {
-            comments[sourceId] = commentInput.value.trim();
+            comments[accountId] = commentInput.value.trim();
         }
     });
 
@@ -566,33 +573,33 @@ function exportCSV() {
     }
 
     const sortedEntries = [...data.entries].sort((a, b) => new Date(a.date) - new Date(b.date));
-    const allSources = data.sources.filter(s => {
-        return sortedEntries.some(e => e.values[s.id] !== undefined);
+    const allAccounts = data.accounts.filter(a => {
+        return sortedEntries.some(e => e.values[a.id] !== undefined);
     });
 
     let csv = 'Date';
-    for (const source of allSources) {
-        csv += `,"${source.name}","${source.name} Comment"`;
+    for (const account of allAccounts) {
+        csv += `,"${account.name}","${account.name} Comment"`;
     }
     csv += ',Total\n';
 
     const runningValues = {};
 
     for (const entry of sortedEntries) {
-        for (const source of allSources) {
-            if (entry.values[source.id] !== undefined) {
-                runningValues[source.id] = entry.values[source.id];
+        for (const account of allAccounts) {
+            if (entry.values[account.id] !== undefined) {
+                runningValues[account.id] = entry.values[account.id];
             }
         }
 
         let row = entry.date;
-        for (const source of allSources) {
-            const val = runningValues[source.id] || 0;
-            const comment = entry.comments?.[source.id] || '';
+        for (const account of allAccounts) {
+            const val = runningValues[account.id] || 0;
+            const comment = entry.comments?.[account.id] || '';
             row += `,${val},"${comment.replace(/"/g, '""')}"`;
         }
 
-        const total = allSources.reduce((sum, s) => sum + (runningValues[s.id] || 0), 0);
+        const total = allAccounts.reduce((sum, a) => sum + (runningValues[a.id] || 0), 0);
         row += `,${total}`;
         csv += row + '\n';
     }
@@ -676,23 +683,23 @@ function importCSV(file) {
             return;
         }
 
-        // Find source columns (skip ignored columns)
-        const sourceColumns = [];
+        // Find account columns (skip ignored columns)
+        const accountColumns = [];
         for (let i = 1; i < headers.length; i++) {
             const header = headers[i];
             if (!header || isIgnoredColumn(header)) continue;
-            sourceColumns.push({ index: i, name: header });
+            accountColumns.push({ index: i, name: header });
         }
 
-        // Create or find sources
-        const sourceMap = {};
-        for (const col of sourceColumns) {
-            let source = data.sources.find(s => s.name.toLowerCase() === col.name.toLowerCase());
-            if (!source) {
-                source = { id: generateId(), name: col.name, closed: false };
-                data.sources.push(source);
+        // Create or find accounts
+        const accountMap = {};
+        for (const col of accountColumns) {
+            let account = data.accounts.find(a => a.name.toLowerCase() === col.name.toLowerCase());
+            if (!account) {
+                account = { id: generateId(), name: col.name, closed: false };
+                data.accounts.push(account);
             }
-            sourceMap[col.index] = source.id;
+            accountMap[col.index] = account.id;
         }
 
         // Import entries
@@ -706,11 +713,11 @@ function importCSV(file) {
 
             const values = {};
 
-            for (const col of sourceColumns) {
+            for (const col of accountColumns) {
                 const cellValue = row[col.index];
                 const val = parseNumber(cellValue);
                 // Empty cells or unparseable values become 0
-                values[sourceMap[col.index]] = isNaN(val) ? 0 : val;
+                values[accountMap[col.index]] = isNaN(val) ? 0 : val;
             }
 
             if (Object.keys(values).length > 0) {
@@ -742,14 +749,14 @@ document.getElementById('totalValue').addEventListener('click', () => {
     document.getElementById('totalSection').classList.toggle('expanded');
 });
 
-document.getElementById('closedSourcesToggle').addEventListener('click', (e) => {
+document.getElementById('closedAccountsToggle').addEventListener('click', (e) => {
     e.stopPropagation();
-    document.getElementById('closedSourcesList').classList.toggle('expanded');
+    document.getElementById('closedAccountsList').classList.toggle('expanded');
 });
 
 document.getElementById('showAllBtn').addEventListener('click', (e) => {
     e.stopPropagation();
-    hiddenSources.clear();
+    hiddenAccounts.clear();
     updateTotalDisplay();
     updateChart();
     updateTable();
@@ -757,7 +764,7 @@ document.getElementById('showAllBtn').addEventListener('click', (e) => {
 
 document.getElementById('hideAllBtn').addEventListener('click', (e) => {
     e.stopPropagation();
-    data.sources.forEach(s => hiddenSources.add(s.id));
+    data.accounts.forEach(a => hiddenAccounts.add(a.id));
     updateTotalDisplay();
     updateChart();
     updateTable();
@@ -774,7 +781,7 @@ document.getElementById('importFile').addEventListener('change', (e) => {
     }
 });
 document.getElementById('exportBtn').addEventListener('click', exportCSV);
-document.getElementById('addSourceBtn').addEventListener('click', addSource);
+document.getElementById('addAccountBtn').addEventListener('click', addAccount);
 document.getElementById('saveBtn').addEventListener('click', saveEntry);
 document.getElementById('cancelBtn').addEventListener('click', closeModal);
 document.querySelector('#dataModal .close-btn').addEventListener('click', closeModal);
@@ -785,9 +792,9 @@ document.getElementById('dataModal').addEventListener('click', (e) => {
     }
 });
 
-document.getElementById('newSourceName').addEventListener('keypress', (e) => {
+document.getElementById('newAccountName').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
-        addSource();
+        addAccount();
     }
 });
 
@@ -820,7 +827,7 @@ document.getElementById('currencySelect').addEventListener('change', (e) => {
 
 document.getElementById('clearDataBtn').addEventListener('click', () => {
     if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
-        data = { sources: [], entries: [] };
+        data = { accounts: [], entries: [] };
         saveData();
         updateUI();
         document.getElementById('settingsModal').classList.remove('active');
