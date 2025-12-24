@@ -257,6 +257,28 @@ section h2 {
     opacity: 0.3;
 }
 
+.legend-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    padding-top: 0.5rem;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 0.25rem;
+}
+
+.btn-link:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
 .chart-container {
     position: relative;
     height: 500px;

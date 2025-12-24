@@ -700,6 +700,20 @@ document.getElementById('closedSourcesToggle').addEventListener('click', (e) => 
     document.getElementById('closedSourcesList').classList.toggle('expanded');
 });
 
+document.getElementById('showAllBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    hiddenSources.clear();
+    updateTotalDisplay();
+    updateChart();
+});
+
+document.getElementById('hideAllBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    data.sources.forEach(s => hiddenSources.add(s.id));
+    updateTotalDisplay();
+    updateChart();
+});
+
 document.getElementById('enterDataBtn').addEventListener('click', openModal);
 document.getElementById('importBtn').addEventListener('click', () => {
     document.getElementById('importFile').click();
