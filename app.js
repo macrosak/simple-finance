@@ -113,6 +113,29 @@ function generateId() {
 
 function updateTotalDisplay() {
     document.getElementById('totalValue').textContent = formatCurrency(calculateTotal());
+
+    const breakdown = document.getElementById('sourceBreakdown');
+    const latestValues = getLatestValues();
+    const activeSources = data.sources.filter(s => !s.closed);
+
+    if (activeSources.length === 0) {
+        breakdown.innerHTML = '';
+        return;
+    }
+
+    const items = activeSources
+        .map(source => ({
+            name: source.name,
+            value: latestValues[source.id] || 0
+        }))
+        .sort((a, b) => b.value - a.value);
+
+    breakdown.innerHTML = items.map(item => `
+        <div class="source-breakdown-item">
+            <span class="source-breakdown-name">${item.name}</span>
+            <span class="source-breakdown-value">${formatCurrency(item.value)}</span>
+        </div>
+    `).join('');
 }
 
 function updateChart() {
@@ -614,6 +637,10 @@ function updateUI() {
 }
 
 // Event listeners
+document.getElementById('totalSection').addEventListener('click', () => {
+    document.getElementById('totalSection').classList.toggle('expanded');
+});
+
 document.getElementById('enterDataBtn').addEventListener('click', openModal);
 document.getElementById('importBtn').addEventListener('click', () => {
     document.getElementById('importFile').click();

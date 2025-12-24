@@ -147,12 +147,49 @@ section h2 {
 
 .total-section {
     text-align: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.total-section:hover {
+    background: var(--background);
 }
 
 .total-value {
     font-size: 3rem;
     font-weight: 700;
     color: var(--text);
+}
+
+.source-breakdown {
+    display: none;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    text-align: left;
+}
+
+.total-section.expanded .source-breakdown {
+    display: block;
+}
+
+.source-breakdown-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.source-breakdown-item:last-child {
+    border-bottom: none;
+}
+
+.source-breakdown-name {
+    color: var(--text-secondary);
+}
+
+.source-breakdown-value {
+    font-weight: 600;
 }
 
 .chart-container {
