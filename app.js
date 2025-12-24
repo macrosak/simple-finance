@@ -11,7 +11,6 @@ let settings = loadSettings();
 let chart = null;
 let zeroBasedChart = true;
 let hiddenSources = new Set();
-let showClosedInTable = false;
 
 function loadSettings() {
     const stored = localStorage.getItem(SETTINGS_KEY);
@@ -185,6 +184,7 @@ function updateTotalDisplay() {
             }
             updateTotalDisplay();
             updateChart();
+            updateTable();
         });
     });
 }
@@ -292,8 +292,8 @@ function updateTable() {
     const sortedEntries = [...data.entries].sort((a, b) => new Date(b.date) - new Date(a.date));
     const activeSources = data.sources.filter(s => {
         const hasData = sortedEntries.some(e => e.values[s.id] !== undefined);
-        const showSource = showClosedInTable || !s.closed;
-        return hasData && showSource;
+        const isVisible = !hiddenSources.has(s.id);
+        return hasData && isVisible;
     });
 
     // Build header
@@ -708,6 +708,7 @@ document.getElementById('showAllBtn').addEventListener('click', (e) => {
     hiddenSources.clear();
     updateTotalDisplay();
     updateChart();
+    updateTable();
 });
 
 document.getElementById('hideAllBtn').addEventListener('click', (e) => {
@@ -715,6 +716,7 @@ document.getElementById('hideAllBtn').addEventListener('click', (e) => {
     data.sources.forEach(s => hiddenSources.add(s.id));
     updateTotalDisplay();
     updateChart();
+    updateTable();
 });
 
 document.getElementById('enterDataBtn').addEventListener('click', openModal);
@@ -748,11 +750,6 @@ document.getElementById('newSourceName').addEventListener('keypress', (e) => {
 document.getElementById('zeroBasedCheckbox').addEventListener('change', (e) => {
     zeroBasedChart = e.target.checked;
     updateChart();
-});
-
-document.getElementById('showClosedInTableCheckbox').addEventListener('change', (e) => {
-    showClosedInTable = e.target.checked;
-    updateTable();
 });
 
 // Settings
