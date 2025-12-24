@@ -14,7 +14,7 @@
     --text: #1e293b;
     --text-secondary: #64748b;
     --border: #e2e8f0;
-    --success: #22c55e;
+    --success: #16a34a;
     --danger: #ef4444;
 }
 
@@ -168,11 +168,15 @@ section h2 {
 
 .total-change {
     font-size: 1.125rem;
-    color: var(--success);
+    color: var(--text-secondary);
     margin-bottom: 1.5rem;
 }
 
-.total-change.negative {
+.total-change .change-amount {
+    color: var(--success);
+}
+
+.total-change.negative .change-amount {
     color: var(--danger);
 }
 

@@ -158,10 +158,10 @@ function updateTotalDisplay() {
     const change = calculateChangeSinceLastEntry();
     if (change !== null) {
         const sign = change >= 0 ? '+' : '';
-        changeEl.textContent = `${sign}${formatCurrency(change)} since last entry`;
+        changeEl.innerHTML = `<span class="change-amount">${sign}${formatCurrency(change)}</span> since last entry`;
         changeEl.className = 'total-change' + (change < 0 ? ' negative' : '');
     } else {
-        changeEl.textContent = '';
+        changeEl.innerHTML = '';
     }
 
     const activeList = document.getElementById('activeSourcesList');
