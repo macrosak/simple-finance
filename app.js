@@ -64,6 +64,39 @@ function calculateTotal() {
     return Object.values(latest).reduce((sum, val) => sum + val, 0);
 }
 
+function calculateChangeSinceLastEntry() {
+    if (data.entries.length < 2) return null;
+
+    const sortedEntries = [...data.entries].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const activeSources = data.sources.filter(s => !s.closed);
+
+    // Calculate totals for the two most recent entries
+    const runningValues = {};
+    let latestTotal = 0;
+    let previousTotal = 0;
+
+    // Process all entries from oldest to newest to build running totals
+    const chronological = [...sortedEntries].reverse();
+    for (let i = 0; i < chronological.length; i++) {
+        const entry = chronological[i];
+        for (const source of activeSources) {
+            if (entry.values[source.id] !== undefined) {
+                runningValues[source.id] = entry.values[source.id];
+            }
+        }
+
+        const total = activeSources.reduce((sum, s) => sum + (runningValues[s.id] || 0), 0);
+
+        if (i === chronological.length - 1) {
+            latestTotal = total;
+        } else if (i === chronological.length - 2) {
+            previousTotal = total;
+        }
+    }
+
+    return latestTotal - previousTotal;
+}
+
 const CURRENCY_LOCALES = {
     USD: 'en-US',
     EUR: 'de-DE',
@@ -119,6 +152,17 @@ function getSourceColor(sourceId) {
 
 function updateTotalDisplay() {
     document.getElementById('totalValue').textContent = formatCurrency(calculateTotal());
+
+    // Update change since last entry
+    const changeEl = document.getElementById('totalChange');
+    const change = calculateChangeSinceLastEntry();
+    if (change !== null) {
+        const sign = change >= 0 ? '+' : '';
+        changeEl.textContent = `${sign}${formatCurrency(change)} since last entry`;
+        changeEl.className = 'total-change' + (change < 0 ? ' negative' : '');
+    } else {
+        changeEl.textContent = '';
+    }
 
     const activeList = document.getElementById('activeSourcesList');
     const closedList = document.getElementById('closedSourcesList');
