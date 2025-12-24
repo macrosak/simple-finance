@@ -606,10 +606,10 @@ function importCSV(file) {
             const values = {};
 
             for (const col of sourceColumns) {
-                const val = parseNumber(row[col.index]);
-                if (!isNaN(val)) {
-                    values[sourceMap[col.index]] = val;
-                }
+                const cellValue = row[col.index];
+                const val = parseNumber(cellValue);
+                // Empty cells or unparseable values become 0
+                values[sourceMap[col.index]] = isNaN(val) ? 0 : val;
             }
 
             if (Object.keys(values).length > 0) {
