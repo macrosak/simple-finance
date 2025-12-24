@@ -10,6 +10,7 @@ let data = loadData();
 let settings = loadSettings();
 let chart = null;
 let zeroBasedChart = true;
+let hiddenSources = new Set();
 
 function loadSettings() {
     const stored = localStorage.getItem(SETTINGS_KEY);
@@ -111,31 +112,80 @@ function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
 }
 
+function getSourceColor(sourceId) {
+    const idx = data.sources.findIndex(s => s.id === sourceId);
+    return CHART_COLORS[idx % CHART_COLORS.length];
+}
+
 function updateTotalDisplay() {
     document.getElementById('totalValue').textContent = formatCurrency(calculateTotal());
 
-    const breakdown = document.getElementById('sourceBreakdown');
+    const activeList = document.getElementById('activeSourcesList');
+    const closedList = document.getElementById('closedSourcesList');
+    const closedToggle = document.getElementById('closedSourcesToggle');
     const latestValues = getLatestValues();
+
     const activeSources = data.sources.filter(s => !s.closed);
+    const closedSources = data.sources.filter(s => s.closed);
 
-    if (activeSources.length === 0) {
-        breakdown.innerHTML = '';
-        return;
-    }
-
-    const items = activeSources
+    // Render active sources
+    const activeItems = activeSources
         .map(source => ({
+            id: source.id,
             name: source.name,
-            value: latestValues[source.id] || 0
+            value: latestValues[source.id] || 0,
+            color: getSourceColor(source.id)
         }))
         .sort((a, b) => b.value - a.value);
 
-    breakdown.innerHTML = items.map(item => `
-        <div class="source-breakdown-item">
-            <span class="source-breakdown-name">${item.name}</span>
+    activeList.innerHTML = activeItems.map(item => `
+        <div class="source-breakdown-item ${hiddenSources.has(item.id) ? 'hidden-source' : ''}" data-source-id="${item.id}">
+            <div class="source-name-wrapper">
+                <span class="source-color" style="background: ${item.color}"></span>
+                <span class="source-breakdown-name">${item.name}</span>
+            </div>
             <span class="source-breakdown-value">${formatCurrency(item.value)}</span>
         </div>
     `).join('');
+
+    // Render closed sources
+    if (closedSources.length > 0) {
+        closedToggle.classList.add('visible');
+
+        const closedItems = closedSources.map(source => ({
+            id: source.id,
+            name: source.name,
+            color: getSourceColor(source.id)
+        }));
+
+        closedList.innerHTML = closedItems.map(item => `
+            <div class="source-breakdown-item ${hiddenSources.has(item.id) ? 'hidden-source' : ''}" data-source-id="${item.id}">
+                <div class="source-name-wrapper">
+                    <span class="source-color" style="background: ${item.color}"></span>
+                    <span class="source-breakdown-name">${item.name}</span>
+                </div>
+                <span class="source-breakdown-value">closed</span>
+            </div>
+        `).join('');
+    } else {
+        closedToggle.classList.remove('visible');
+        closedList.innerHTML = '';
+    }
+
+    // Add click handlers for toggling source visibility
+    document.querySelectorAll('.source-breakdown-item[data-source-id]').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const sourceId = item.getAttribute('data-source-id');
+            if (hiddenSources.has(sourceId)) {
+                hiddenSources.delete(sourceId);
+            } else {
+                hiddenSources.add(sourceId);
+            }
+            updateTotalDisplay();
+            updateChart();
+        });
+    });
 }
 
 function updateChart() {
@@ -156,13 +206,17 @@ function updateChart() {
     noDataMsg.classList.add('hidden');
 
     const sortedEntries = [...data.entries].sort((a, b) => new Date(a.date) - new Date(b.date));
-    const activeSources = data.sources.filter(s => {
+    const sourcesWithData = data.sources.filter(s => {
         return sortedEntries.some(e => e.values[s.id] !== undefined);
     });
 
+    // Filter out hidden sources
+    const visibleSources = sourcesWithData.filter(s => !hiddenSources.has(s.id));
+
     const labels = sortedEntries.map(e => e.date);
 
-    const datasets = activeSources.map((source, idx) => {
+    const datasets = visibleSources.map((source) => {
+        const color = getSourceColor(source.id);
         let lastValue = 0;
         const values = sortedEntries.map(entry => {
             if (entry.values[source.id] !== undefined) {
@@ -175,8 +229,8 @@ function updateChart() {
             label: source.name,
             data: values,
             fill: true,
-            backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] + '80',
-            borderColor: CHART_COLORS[idx % CHART_COLORS.length],
+            backgroundColor: color + '80',
+            borderColor: color,
             borderWidth: 2
         };
     });
@@ -193,7 +247,7 @@ function updateChart() {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    position: 'bottom'
+                    display: false
                 },
                 tooltip: {
                     callbacks: {
@@ -637,8 +691,13 @@ function updateUI() {
 }
 
 // Event listeners
-document.getElementById('totalSection').addEventListener('click', () => {
+document.getElementById('totalValue').addEventListener('click', () => {
     document.getElementById('totalSection').classList.toggle('expanded');
+});
+
+document.getElementById('closedSourcesToggle').addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('closedSourcesList').classList.toggle('expanded');
 });
 
 document.getElementById('enterDataBtn').addEventListener('click', openModal);
