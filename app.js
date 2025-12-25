@@ -11,6 +11,7 @@ let settings = loadSettings();
 let chart = null;
 let zeroBasedChart = true;
 let hiddenAccounts = new Set();
+let selectedTimeRange = 'all'; // 'all', '1', '3', '5' (years)
 
 function loadSettings() {
     const stored = localStorage.getItem(SETTINGS_KEY);
@@ -255,6 +256,20 @@ function updateTotalDisplay() {
     });
 }
 
+function getFilteredEntries() {
+    const sortedEntries = [...data.entries].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (selectedTimeRange === 'all') {
+        return sortedEntries;
+    }
+
+    const years = parseInt(selectedTimeRange);
+    const cutoffDate = new Date();
+    cutoffDate.setFullYear(cutoffDate.getFullYear() - years);
+
+    return sortedEntries.filter(e => new Date(e.date) >= cutoffDate);
+}
+
 function updateChart() {
     const canvas = document.getElementById('assetChart');
     const noDataMsg = document.getElementById('noDataMessage');
@@ -272,20 +287,32 @@ function updateChart() {
     canvas.style.display = 'block';
     noDataMsg.classList.add('hidden');
 
-    const sortedEntries = [...data.entries].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const filteredEntries = getFilteredEntries();
     const accountsWithData = data.accounts.filter(a => {
-        return sortedEntries.some(e => e.values[a.id] !== undefined);
+        return filteredEntries.some(e => e.values[a.id] !== undefined);
     });
 
     // Filter out hidden accounts
     const visibleAccounts = accountsWithData.filter(a => !hiddenAccounts.has(a.id));
 
-    const labels = sortedEntries.map(e => e.date);
+    const labels = filteredEntries.map(e => e.date);
+
+    // Build running values from the beginning for correct totals
+    const allSortedEntries = [...data.entries].sort((a, b) => new Date(a.date) - new Date(b.date));
 
     const datasets = visibleAccounts.map((account) => {
         const color = getAccountColor(account.id);
+
+        // Initialize running values from entries before the filtered range
         let lastValue = 0;
-        const values = sortedEntries.map(entry => {
+        for (const entry of allSortedEntries) {
+            if (entry.values[account.id] !== undefined) {
+                lastValue = entry.values[account.id];
+            }
+            if (filteredEntries.includes(entry)) break;
+        }
+
+        const values = filteredEntries.map(entry => {
             if (entry.values[account.id] !== undefined) {
                 lastValue = entry.values[account.id];
             }
@@ -319,6 +346,21 @@ function updateChart() {
                 tooltip: {
                     callbacks: {
                         label: (context) => `${context.dataset.label}: ${formatCurrency(context.raw)}`
+                    }
+                },
+                zoom: {
+                    pan: {
+                        enabled: true,
+                        mode: 'x'
+                    },
+                    zoom: {
+                        wheel: {
+                            enabled: true
+                        },
+                        pinch: {
+                            enabled: true
+                        },
+                        mode: 'x'
                     }
                 }
             },
@@ -806,6 +848,23 @@ document.getElementById('newAccountName').addEventListener('keypress', (e) => {
 document.getElementById('zeroBasedCheckbox').addEventListener('change', (e) => {
     zeroBasedChart = e.target.checked;
     updateChart();
+});
+
+// Time range buttons
+document.querySelectorAll('.time-range-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.time-range-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedTimeRange = btn.dataset.range;
+        updateChart();
+    });
+});
+
+// Reset zoom button
+document.getElementById('resetZoomBtn').addEventListener('click', () => {
+    if (chart) {
+        chart.resetZoom();
+    }
 });
 
 // Settings

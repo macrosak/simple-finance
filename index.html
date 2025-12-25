@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -51,6 +52,15 @@
                         <input type="checkbox" id="zeroBasedCheckbox" checked>
                         Zero-based
                     </label>
+                </div>
+                <div class="chart-controls">
+                    <div class="time-range-buttons">
+                        <button class="time-range-btn" data-range="1">1Y</button>
+                        <button class="time-range-btn" data-range="3">3Y</button>
+                        <button class="time-range-btn" data-range="5">5Y</button>
+                        <button class="time-range-btn active" data-range="all">All</button>
+                    </div>
+                    <button id="resetZoomBtn" class="btn-link">Reset zoom</button>
                 </div>
                 <div class="chart-container">
                     <canvas id="assetChart"></canvas>
