@@ -782,6 +782,37 @@ th {
     font-weight: 500;
 }
 
+.d3-tooltip-section {
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.d3-tooltip-highlight {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.d3-tooltip-all {
+    opacity: 0.85;
+    font-size: 0.8rem;
+}
+
+.d3-tooltip-all .d3-tooltip-row {
+    padding: 0.0625rem 0;
+}
+
+.d3-tooltip-current {
+    font-weight: 600;
+    opacity: 1;
+}
+
+.d3-tooltip-total {
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+}
+
 /* Responsive */
 @media (min-width: 1024px) {
     .main-layout {

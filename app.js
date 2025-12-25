@@ -1134,31 +1134,110 @@ function updateD3Chart() {
     const tooltip = d3.select('#d3Tooltip');
     const bisect = d3.bisector(d => d.date).left;
 
+    // Function to find which area is hovered based on y position
+    function findHoveredAccount(mx, my) {
+        const x0 = xScale.invert(mx);
+        const i = bisect(stackData, x0, 1);
+        const d0 = stackData[i - 1];
+        const d1 = stackData[i];
+
+        if (!d0 && !d1) return { dataPoint: null, hoveredAccount: null };
+
+        const dataPoint = !d1 ? d0 : !d0 ? d1 : (x0 - d0.date > d1.date - x0 ? d1 : d0);
+
+        // Find which stacked layer the mouse is in
+        let hoveredAccount = null;
+        const yValue = yScale.invert(my);
+
+        // Go through series to find which band contains the y value
+        for (let j = 0; j < series.length; j++) {
+            const layerData = series[j];
+            const idx = stackData.indexOf(dataPoint);
+            if (idx >= 0 && layerData[idx]) {
+                const y0 = layerData[idx][0];
+                const y1 = layerData[idx][1];
+                if (yValue >= y0 && yValue <= y1) {
+                    hoveredAccount = visibleAccounts.find(a => a.id === layerData.key);
+                    break;
+                }
+            }
+        }
+
+        return { dataPoint, hoveredAccount };
+    }
+
+    // Position tooltip within viewport
+    function positionTooltip(event) {
+        const tooltipNode = tooltip.node();
+        const tooltipRect = tooltipNode.getBoundingClientRect();
+        const padding = 15;
+
+        let left = event.pageX + padding;
+        let top = event.pageY - padding;
+
+        // Check right edge
+        if (left + tooltipRect.width > window.innerWidth - padding) {
+            left = event.pageX - tooltipRect.width - padding;
+        }
+
+        // Check bottom edge
+        if (top + tooltipRect.height > window.innerHeight - padding) {
+            top = window.innerHeight - tooltipRect.height - padding;
+        }
+
+        // Check left edge
+        if (left < padding) {
+            left = padding;
+        }
+
+        // Check top edge
+        if (top < padding) {
+            top = padding;
+        }
+
+        tooltip
+            .style('left', left + 'px')
+            .style('top', top + 'px');
+    }
+
     // Add overlay for mouse events
     const overlay = g.append('rect')
         .attr('class', 'zoom-rect')
         .attr('width', width)
         .attr('height', height)
         .on('mousemove', function(event) {
-            const [mx] = d3.pointer(event);
-            const x0 = xScale.invert(mx);
-            const i = bisect(stackData, x0, 1);
-            const d0 = stackData[i - 1];
-            const d1 = stackData[i];
+            const [mx, my] = d3.pointer(event);
+            const { dataPoint, hoveredAccount } = findHoveredAccount(mx, my);
 
-            if (!d0 && !d1) return;
-
-            const d = !d1 ? d0 : !d0 ? d1 : (x0 - d0.date > d1.date - x0 ? d1 : d0);
+            if (!dataPoint) return;
 
             // Build tooltip content
-            let html = `<div class="d3-tooltip-title">${formatDate(d.date)}</div>`;
-            let total = 0;
+            let html = `<div class="d3-tooltip-title">${formatDate(dataPoint.date)}</div>`;
 
+            // Section 1: Hovered account (if any)
+            if (hoveredAccount) {
+                const value = dataPoint[hoveredAccount.id] || 0;
+                const color = getAccountColor(hoveredAccount.id);
+                html += `<div class="d3-tooltip-section">
+                    <div class="d3-tooltip-row d3-tooltip-highlight">
+                        <span class="d3-tooltip-name">
+                            <span class="d3-tooltip-color" style="background:${color}"></span>
+                            ${escapeHtml(hoveredAccount.name)}
+                        </span>
+                        <span class="d3-tooltip-value">${formatCurrency(value)}</span>
+                    </div>
+                </div>`;
+            }
+
+            // Section 2: All accounts
+            let total = 0;
+            html += `<div class="d3-tooltip-section d3-tooltip-all">`;
             for (const account of visibleAccounts) {
-                const value = d[account.id] || 0;
+                const value = dataPoint[account.id] || 0;
                 total += value;
                 const color = getAccountColor(account.id);
-                html += `<div class="d3-tooltip-row">
+                const isHovered = hoveredAccount && account.id === hoveredAccount.id;
+                html += `<div class="d3-tooltip-row${isHovered ? ' d3-tooltip-current' : ''}">
                     <span class="d3-tooltip-name">
                         <span class="d3-tooltip-color" style="background:${color}"></span>
                         ${escapeHtml(account.name)}
@@ -1166,26 +1245,29 @@ function updateD3Chart() {
                     <span class="d3-tooltip-value">${formatCurrency(value)}</span>
                 </div>`;
             }
+            html += `</div>`;
 
-            html += `<div class="d3-tooltip-row" style="border-top: 1px solid rgba(255,255,255,0.2); margin-top: 0.5rem; padding-top: 0.5rem;">
+            html += `<div class="d3-tooltip-row d3-tooltip-total">
                 <span class="d3-tooltip-name"><strong>Total</strong></span>
                 <span class="d3-tooltip-value"><strong>${formatCurrency(total)}</strong></span>
             </div>`;
 
-            tooltip.html(html)
-                .style('left', (event.pageX + 15) + 'px')
-                .style('top', (event.pageY - 10) + 'px')
-                .classed('visible', true);
+            tooltip.html(html).classed('visible', true);
+            positionTooltip(event);
         })
         .on('mouseleave', function() {
             tooltip.classed('visible', false);
         });
 
-    // Zoom behavior
+    // Zoom behavior - allow pan even when not zoomed
     const zoom = d3.zoom()
         .scaleExtent([1, 20])
-        .translateExtent([[0, 0], [width, height]])
+        .translateExtent([[0, -Infinity], [width, Infinity]])
         .extent([[0, 0], [width, height]])
+        .filter(function(event) {
+            // Allow all events for touch, wheel events, and mouse drag
+            return !event.ctrlKey && !event.button;
+        })
         .on('zoom', function(event) {
             d3CurrentTransform = event.transform;
 
@@ -1205,14 +1287,11 @@ function updateD3Chart() {
             updateD3ResetZoomButton();
         });
 
-    // Apply zoom to overlay
-    overlay.call(zoom);
-
-    // Enable touch zoom
-    overlay.on('touchstart.zoom', null)
-        .call(zoom)
+    // Apply zoom to overlay with touch support
+    overlay.call(zoom)
         .on('touchstart.zoom', function(event) {
-            if (event.touches.length === 2) {
+            // Allow single finger pan
+            if (event.touches.length === 1) {
                 event.preventDefault();
             }
         });
