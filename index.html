@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Finance Tracker</title>
-    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="style.css?v=4">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 </head>
 <body>
     <div class="container">
@@ -71,6 +72,31 @@
                 <div id="noDataMessage" class="no-data-message">No data yet. Click "Enter Data" to start tracking.</div>
             </section>
             </div>
+
+            <section class="chart-section d3-chart-section">
+                <div class="section-header">
+                    <h2>Asset History (D3)</h2>
+                    <div class="chart-header-controls">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="d3ZeroBasedCheckbox" checked>
+                            Zero-based
+                        </label>
+                    </div>
+                </div>
+                <div class="chart-controls">
+                    <div class="time-range-buttons d3-time-range-buttons">
+                        <button class="time-range-btn d3-time-range-btn" data-range="1">1Y</button>
+                        <button class="time-range-btn d3-time-range-btn" data-range="3">3Y</button>
+                        <button class="time-range-btn d3-time-range-btn" data-range="5">5Y</button>
+                        <button class="time-range-btn d3-time-range-btn active" data-range="all">All</button>
+                    </div>
+                    <button id="d3ResetZoomBtn" class="btn-link reset-zoom-btn">Reset zoom</button>
+                </div>
+                <div class="chart-container d3-chart-container" id="d3ChartContainer">
+                    <svg id="d3Chart"></svg>
+                </div>
+                <div id="d3NoDataMessage" class="no-data-message">No data yet. Click "Enter Data" to start tracking.</div>
+            </section>
 
             <section class="table-section">
                 <h2>Data Table</h2>
@@ -144,6 +170,9 @@
     <!-- Tooltip for comments -->
     <div id="tooltip" class="tooltip"></div>
 
+    <!-- D3 Chart Tooltip -->
+    <div id="d3Tooltip" class="d3-tooltip"></div>
+
     <!-- Templates -->
     <template id="accountBreakdownItemTemplate">
         <div class="account-breakdown-item" data-account-id="">
@@ -166,6 +195,6 @@
         </div>
     </template>
 
-    <script src="app.js?v=3"></script>
+    <script src="app.js?v=4"></script>
 </body>
 </html>

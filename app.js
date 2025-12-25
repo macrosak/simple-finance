@@ -941,5 +941,356 @@ document.getElementById('clearDataBtn').addEventListener('click', () => {
     }
 });
 
+// ==================== D3 CHART ====================
+
+let d3Chart = null;
+let d3ZeroBasedChart = true;
+let d3SelectedTimeRange = 'all';
+let d3CurrentTransform = d3.zoomIdentity;
+
+function getD3FilteredEntries() {
+    const sortedEntries = [...data.entries].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (d3SelectedTimeRange === 'all') {
+        return sortedEntries;
+    }
+
+    const years = parseInt(d3SelectedTimeRange);
+    const cutoffDate = new Date();
+    cutoffDate.setFullYear(cutoffDate.getFullYear() - years);
+
+    return sortedEntries.filter(e => new Date(e.date) >= cutoffDate);
+}
+
+function updateD3ResetZoomButton() {
+    const btn = document.getElementById('d3ResetZoomBtn');
+    if (d3CurrentTransform.k !== 1 || d3CurrentTransform.x !== 0) {
+        btn.classList.add('visible');
+    } else {
+        btn.classList.remove('visible');
+    }
+}
+
+function updateD3Chart() {
+    const container = document.getElementById('d3ChartContainer');
+    const svg = d3.select('#d3Chart');
+    const noDataMsg = document.getElementById('d3NoDataMessage');
+
+    if (data.entries.length === 0) {
+        svg.selectAll('*').remove();
+        noDataMsg.classList.remove('hidden');
+        return;
+    }
+
+    noDataMsg.classList.add('hidden');
+
+    // Get dimensions
+    const margin = { top: 20, right: 20, bottom: 40, left: 60 };
+    const width = container.clientWidth - margin.left - margin.right;
+    const height = container.clientHeight - margin.top - margin.bottom;
+
+    // Clear previous content
+    svg.selectAll('*').remove();
+
+    // Get data
+    const filteredEntries = getD3FilteredEntries();
+    const accountsWithData = data.accounts.filter(a => {
+        return filteredEntries.some(e => e.values[a.id] !== undefined);
+    });
+    const visibleAccounts = accountsWithData.filter(a => !hiddenAccounts.has(a.id));
+
+    if (visibleAccounts.length === 0 || filteredEntries.length === 0) {
+        return;
+    }
+
+    // Build running values from the beginning
+    const allSortedEntries = [...data.entries].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Create data structure for D3 stack
+    const stackData = [];
+    const runningValues = {};
+
+    // Initialize running values from entries before filtered range
+    for (const account of visibleAccounts) {
+        runningValues[account.id] = 0;
+        for (const entry of allSortedEntries) {
+            if (entry.values[account.id] !== undefined) {
+                runningValues[account.id] = entry.values[account.id];
+            }
+            if (filteredEntries.includes(entry)) break;
+        }
+    }
+
+    // Build stack data
+    for (const entry of filteredEntries) {
+        const dataPoint = { date: new Date(entry.date) };
+        for (const account of visibleAccounts) {
+            if (entry.values[account.id] !== undefined) {
+                runningValues[account.id] = entry.values[account.id];
+            }
+            dataPoint[account.id] = runningValues[account.id];
+        }
+        stackData.push(dataPoint);
+    }
+
+    // Create stack generator
+    const keys = visibleAccounts.map(a => a.id);
+    const stack = d3.stack()
+        .keys(keys)
+        .order(d3.stackOrderNone)
+        .offset(d3.stackOffsetNone);
+
+    const series = stack(stackData);
+
+    // Create scales
+    const xExtent = d3.extent(stackData, d => d.date);
+    const xScale = d3.scaleTime()
+        .domain(xExtent)
+        .range([0, width]);
+
+    const yMax = d3.max(series, s => d3.max(s, d => d[1]));
+    const yScale = d3.scaleLinear()
+        .domain([d3ZeroBasedChart ? 0 : d3.min(series, s => d3.min(s, d => d[0])), yMax * 1.05])
+        .range([height, 0]);
+
+    // Store original scales for zoom
+    const xScaleOrig = xScale.copy();
+    const yScaleOrig = yScale.copy();
+
+    // Create main group
+    const g = svg
+        .attr('width', width + margin.left + margin.right)
+        .attr('height', height + margin.top + margin.bottom)
+        .append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    // Add clip path
+    svg.append('defs')
+        .append('clipPath')
+        .attr('id', 'd3-clip')
+        .append('rect')
+        .attr('width', width)
+        .attr('height', height);
+
+    // Create area generator
+    const area = d3.area()
+        .x(d => xScale(d.data.date))
+        .y0(d => yScale(d[0]))
+        .y1(d => yScale(d[1]))
+        .curve(d3.curveMonotoneX);
+
+    // Create line generator (for borders)
+    const line = d3.line()
+        .x(d => xScale(d.data.date))
+        .y(d => yScale(d[1]))
+        .curve(d3.curveMonotoneX);
+
+    // Add grid lines
+    const yGrid = g.append('g')
+        .attr('class', 'grid')
+        .call(d3.axisLeft(yScale)
+            .tickSize(-width)
+            .tickFormat('')
+            .ticks(5));
+
+    // Add areas group with clip path
+    const areasGroup = g.append('g')
+        .attr('class', 'areas')
+        .attr('clip-path', 'url(#d3-clip)');
+
+    // Add areas
+    const areas = areasGroup.selectAll('.area-layer')
+        .data(series)
+        .enter()
+        .append('path')
+        .attr('class', 'area-layer')
+        .attr('d', area)
+        .attr('fill', d => getAccountColor(d.key));
+
+    // Add lines on top
+    const lines = areasGroup.selectAll('.line-layer')
+        .data(series)
+        .enter()
+        .append('path')
+        .attr('class', 'line-layer')
+        .attr('d', line)
+        .attr('stroke', d => getAccountColor(d.key));
+
+    // Create axes
+    const xAxis = g.append('g')
+        .attr('class', 'axis x-axis')
+        .attr('transform', `translate(0,${height})`)
+        .call(d3.axisBottom(xScale)
+            .ticks(getXAxisTicks(width))
+            .tickFormat(d => formatXAxisLabel(d, xScale)));
+
+    const yAxis = g.append('g')
+        .attr('class', 'axis y-axis')
+        .call(d3.axisLeft(yScale)
+            .ticks(5)
+            .tickFormat(d => formatCompact(d)));
+
+    // Tooltip handling
+    const tooltip = d3.select('#d3Tooltip');
+    const bisect = d3.bisector(d => d.date).left;
+
+    // Add overlay for mouse events
+    const overlay = g.append('rect')
+        .attr('class', 'zoom-rect')
+        .attr('width', width)
+        .attr('height', height)
+        .on('mousemove', function(event) {
+            const [mx] = d3.pointer(event);
+            const x0 = xScale.invert(mx);
+            const i = bisect(stackData, x0, 1);
+            const d0 = stackData[i - 1];
+            const d1 = stackData[i];
+
+            if (!d0 && !d1) return;
+
+            const d = !d1 ? d0 : !d0 ? d1 : (x0 - d0.date > d1.date - x0 ? d1 : d0);
+
+            // Build tooltip content
+            let html = `<div class="d3-tooltip-title">${formatDate(d.date)}</div>`;
+            let total = 0;
+
+            for (const account of visibleAccounts) {
+                const value = d[account.id] || 0;
+                total += value;
+                const color = getAccountColor(account.id);
+                html += `<div class="d3-tooltip-row">
+                    <span class="d3-tooltip-name">
+                        <span class="d3-tooltip-color" style="background:${color}"></span>
+                        ${escapeHtml(account.name)}
+                    </span>
+                    <span class="d3-tooltip-value">${formatCurrency(value)}</span>
+                </div>`;
+            }
+
+            html += `<div class="d3-tooltip-row" style="border-top: 1px solid rgba(255,255,255,0.2); margin-top: 0.5rem; padding-top: 0.5rem;">
+                <span class="d3-tooltip-name"><strong>Total</strong></span>
+                <span class="d3-tooltip-value"><strong>${formatCurrency(total)}</strong></span>
+            </div>`;
+
+            tooltip.html(html)
+                .style('left', (event.pageX + 15) + 'px')
+                .style('top', (event.pageY - 10) + 'px')
+                .classed('visible', true);
+        })
+        .on('mouseleave', function() {
+            tooltip.classed('visible', false);
+        });
+
+    // Zoom behavior
+    const zoom = d3.zoom()
+        .scaleExtent([1, 20])
+        .translateExtent([[0, 0], [width, height]])
+        .extent([[0, 0], [width, height]])
+        .on('zoom', function(event) {
+            d3CurrentTransform = event.transform;
+
+            // Update x scale
+            const newXScale = event.transform.rescaleX(xScaleOrig);
+            xScale.domain(newXScale.domain());
+
+            // Redraw areas and lines
+            areas.attr('d', area);
+            lines.attr('d', line);
+
+            // Update x axis
+            xAxis.call(d3.axisBottom(xScale)
+                .ticks(getXAxisTicks(width))
+                .tickFormat(d => formatXAxisLabel(d, xScale)));
+
+            updateD3ResetZoomButton();
+        });
+
+    // Apply zoom to overlay
+    overlay.call(zoom);
+
+    // Enable touch zoom
+    overlay.on('touchstart.zoom', null)
+        .call(zoom)
+        .on('touchstart.zoom', function(event) {
+            if (event.touches.length === 2) {
+                event.preventDefault();
+            }
+        });
+
+    // Store zoom reference for reset
+    d3Chart = { svg, zoom, overlay, xScaleOrig };
+
+    // Restore previous zoom state
+    if (d3CurrentTransform.k !== 1) {
+        overlay.call(zoom.transform, d3CurrentTransform);
+    }
+
+    updateD3ResetZoomButton();
+}
+
+function getXAxisTicks(width) {
+    if (width < 400) return 4;
+    if (width < 600) return 6;
+    return 8;
+}
+
+function formatXAxisLabel(date, scale) {
+    const domain = scale.domain();
+    const range = domain[1] - domain[0];
+    const days = range / (1000 * 60 * 60 * 24);
+
+    if (days < 60) {
+        return d3.timeFormat('%b %d')(date);
+    } else if (days < 365) {
+        return d3.timeFormat('%b %Y')(date);
+    } else {
+        return d3.timeFormat('%Y')(date);
+    }
+}
+
+function resetD3Zoom() {
+    if (d3Chart && d3Chart.overlay) {
+        d3CurrentTransform = d3.zoomIdentity;
+        d3Chart.overlay.call(d3Chart.zoom.transform, d3.zoomIdentity);
+        updateD3ResetZoomButton();
+    }
+}
+
+// D3 time range buttons
+document.querySelectorAll('.d3-time-range-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.d3-time-range-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        d3SelectedTimeRange = btn.dataset.range;
+        d3CurrentTransform = d3.zoomIdentity; // Reset zoom on range change
+        updateD3Chart();
+    });
+});
+
+// D3 reset zoom button
+document.getElementById('d3ResetZoomBtn').addEventListener('click', resetD3Zoom);
+
+// D3 zero-based checkbox
+document.getElementById('d3ZeroBasedCheckbox').addEventListener('change', (e) => {
+    d3ZeroBasedChart = e.target.checked;
+    updateD3Chart();
+});
+
+// Handle window resize for D3 chart
+let resizeTimeout;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        updateD3Chart();
+    }, 150);
+});
+
+// Override updateUI to also update D3 chart
+const originalUpdateUI = updateUI;
+updateUI = function() {
+    originalUpdateUI();
+    updateD3Chart();
+};
+
 // Initialize
 updateUI();

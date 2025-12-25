@@ -671,6 +671,117 @@ th {
     opacity: 1;
 }
 
+/* D3 Chart */
+.d3-chart-section {
+    margin-top: 1rem;
+}
+
+.d3-chart-container {
+    position: relative;
+    height: 500px;
+    touch-action: none;
+}
+
+.d3-chart-container svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.d3-chart-container .axis text {
+    font-size: 12px;
+    fill: var(--text-secondary);
+}
+
+.d3-chart-container .axis line,
+.d3-chart-container .axis path {
+    stroke: var(--border);
+}
+
+.d3-chart-container .grid line {
+    stroke: var(--border);
+    stroke-opacity: 0.5;
+    stroke-dasharray: 2,2;
+}
+
+.d3-chart-container .grid path {
+    stroke-width: 0;
+}
+
+.d3-chart-container .area-layer {
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.d3-chart-container .area-layer:hover {
+    opacity: 0.8;
+}
+
+.d3-chart-container .line-layer {
+    fill: none;
+    stroke-width: 2;
+}
+
+.d3-chart-container .brush .selection {
+    fill: rgba(37, 99, 235, 0.1);
+    stroke: rgba(37, 99, 235, 0.5);
+}
+
+.d3-chart-container .zoom-rect {
+    fill: none;
+    pointer-events: all;
+}
+
+.d3-tooltip {
+    position: fixed;
+    background: var(--text);
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    max-width: 300px;
+    z-index: 1001;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.d3-tooltip.visible {
+    opacity: 1;
+}
+
+.d3-tooltip-title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 0.5rem;
+}
+
+.d3-tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.125rem 0;
+}
+
+.d3-tooltip-color {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+.d3-tooltip-name {
+    display: flex;
+    align-items: center;
+}
+
+.d3-tooltip-value {
+    font-weight: 500;
+}
+
 /* Responsive */
 @media (min-width: 1024px) {
     .main-layout {
