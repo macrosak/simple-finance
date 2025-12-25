@@ -270,6 +270,15 @@ function getFilteredEntries() {
     return sortedEntries.filter(e => new Date(e.date) >= cutoffDate);
 }
 
+function updateResetZoomButton() {
+    const btn = document.getElementById('resetZoomBtn');
+    if (chart && chart.isZoomedOrPanned()) {
+        btn.classList.add('visible');
+    } else {
+        btn.classList.remove('visible');
+    }
+}
+
 function updateChart() {
     const canvas = document.getElementById('assetChart');
     const noDataMsg = document.getElementById('noDataMessage');
@@ -295,8 +304,6 @@ function updateChart() {
     // Filter out hidden accounts
     const visibleAccounts = accountsWithData.filter(a => !hiddenAccounts.has(a.id));
 
-    const labels = filteredEntries.map(e => e.date);
-
     // Build running values from the beginning for correct totals
     const allSortedEntries = [...data.entries].sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -312,16 +319,17 @@ function updateChart() {
             if (filteredEntries.includes(entry)) break;
         }
 
-        const values = filteredEntries.map(entry => {
+        // Create data points with x (date) and y (value)
+        const dataPoints = filteredEntries.map(entry => {
             if (entry.values[account.id] !== undefined) {
                 lastValue = entry.values[account.id];
             }
-            return lastValue;
+            return { x: entry.date, y: lastValue };
         });
 
         return {
             label: account.name,
-            data: values,
+            data: dataPoints,
             fill: true,
             backgroundColor: color + '80',
             borderColor: color,
@@ -335,7 +343,7 @@ function updateChart() {
 
     chart = new Chart(canvas, {
         type: 'line',
-        data: { labels, datasets },
+        data: { datasets },
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -345,30 +353,62 @@ function updateChart() {
                 },
                 tooltip: {
                     callbacks: {
-                        label: (context) => `${context.dataset.label}: ${formatCurrency(context.raw)}`
+                        title: (items) => {
+                            if (items.length > 0) {
+                                return formatDate(items[0].parsed.x);
+                            }
+                            return '';
+                        },
+                        label: (context) => `${context.dataset.label}: ${formatCurrency(context.raw.y)}`
                     }
                 },
                 zoom: {
                     pan: {
                         enabled: true,
-                        mode: 'x'
+                        mode: 'x',
+                        modifierKey: null
                     },
                     zoom: {
                         wheel: {
-                            enabled: true
+                            enabled: true,
+                            speed: 0.05
                         },
                         pinch: {
                             enabled: true
                         },
-                        mode: 'x'
+                        drag: {
+                            enabled: true,
+                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                            borderColor: 'rgba(37, 99, 235, 0.5)',
+                            borderWidth: 1
+                        },
+                        mode: 'x',
+                        onZoom: updateResetZoomButton,
+                        onZoomComplete: updateResetZoomButton
+                    },
+                    limits: {
+                        x: { minRange: 30 * 24 * 60 * 60 * 1000 } // Minimum 30 days range
                     }
                 }
             },
             scales: {
                 x: {
-                    type: 'category',
+                    type: 'time',
+                    time: {
+                        unit: 'month',
+                        displayFormats: {
+                            day: 'MMM d',
+                            week: 'MMM d',
+                            month: 'MMM yyyy',
+                            quarter: 'MMM yyyy',
+                            year: 'yyyy'
+                        },
+                        tooltipFormat: 'MMM d, yyyy'
+                    },
                     ticks: {
-                        callback: (val, idx) => formatYear(labels[idx])
+                        maxTicksLimit: 8,
+                        autoSkip: true,
+                        autoSkipPadding: 50
                     }
                 },
                 y: {
@@ -385,6 +425,8 @@ function updateChart() {
             }
         }
     });
+
+    updateResetZoomButton();
 }
 
 function updateTable() {
@@ -864,6 +906,7 @@ document.querySelectorAll('.time-range-btn').forEach(btn => {
 document.getElementById('resetZoomBtn').addEventListener('click', () => {
     if (chart) {
         chart.resetZoom();
+        updateResetZoomButton();
     }
 });
 

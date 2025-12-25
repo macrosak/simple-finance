@@ -334,18 +334,21 @@ section h2 {
     text-decoration: underline;
 }
 
+.chart-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
 .chart-controls {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.75rem;
-    flex-wrap: wrap;
-    gap: 0.5rem;
 }
 
 .time-range-buttons {
     display: flex;
-    gap: 0.25rem;
 }
 
 .time-range-btn {
@@ -367,8 +370,8 @@ section h2 {
     border-radius: 0 0.375rem 0.375rem 0;
 }
 
-.time-range-btn:not(:last-child) {
-    border-right: none;
+.time-range-btn:not(:first-child) {
+    border-left: none;
 }
 
 .time-range-btn:hover {
@@ -380,6 +383,17 @@ section h2 {
     background: var(--primary-color);
     border-color: var(--primary-color);
     color: white;
+}
+
+.reset-zoom-btn {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.reset-zoom-btn.visible {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .chart-container {

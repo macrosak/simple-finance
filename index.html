@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Finance Tracker</title>
-    <link rel="stylesheet" href="style.css?v=1">
+    <link rel="stylesheet" href="style.css?v=2">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
@@ -48,10 +48,12 @@
             <section class="chart-section">
                 <div class="section-header">
                     <h2>Asset History</h2>
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="zeroBasedCheckbox" checked>
-                        Zero-based
-                    </label>
+                    <div class="chart-header-controls">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="zeroBasedCheckbox" checked>
+                            Zero-based
+                        </label>
+                    </div>
                 </div>
                 <div class="chart-controls">
                     <div class="time-range-buttons">
@@ -60,7 +62,7 @@
                         <button class="time-range-btn" data-range="5">5Y</button>
                         <button class="time-range-btn active" data-range="all">All</button>
                     </div>
-                    <button id="resetZoomBtn" class="btn-link">Reset zoom</button>
+                    <button id="resetZoomBtn" class="btn-link reset-zoom-btn">Reset zoom</button>
                 </div>
                 <div class="chart-container">
                     <canvas id="assetChart"></canvas>
@@ -162,6 +164,6 @@
         </div>
     </template>
 
-    <script src="app.js?v=1"></script>
+    <script src="app.js?v=2"></script>
 </body>
 </html>
