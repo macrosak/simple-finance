@@ -251,6 +251,7 @@ function updateTotalDisplay() {
             }
             updateTotalDisplay();
             updateChart();
+            updateD3Chart();
             updateTable();
         });
     });
